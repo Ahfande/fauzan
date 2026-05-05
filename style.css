@@ -1,0 +1,675 @@
+:root {
+  --primary: #D4AF37;
+  --background-light: #f6f8f7;
+  --background-dark: #243D32;
+  --forest-accent: #2D4A3E;
+  --forest-depth: #1A3026;
+
+  --gold-glow: rgba(212, 175, 55, 0.3);
+  --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%);
+  --forest-gradient: linear-gradient(180deg, #2D4A3E 0%, #1A3026 100%);
+  
+  /* Spacing & breakpoints */
+  --container-padding: 1rem;
+  --card-padding: 1.25rem;
+  --gap-md: 1rem;
+  --gap-lg: 1.5rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  background: linear-gradient(135deg, var(--background-dark) 0%, var(--forest-depth) 50%, var(--background-dark) 100%);
+  min-height: 100vh;
+  padding: 0;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Forest leaf pattern overlay - optimized */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.08) 2%, transparent 2.5%),
+    radial-gradient(circle at 85% 45%, rgba(212, 175, 55, 0.06) 1.5%, transparent 2%),
+    radial-gradient(circle at 40% 80%, rgba(212, 175, 55, 0.05) 1%, transparent 1.5%),
+    repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.02) 0px, rgba(212, 175, 55, 0.02) 2px, transparent 2px, transparent 8px);
+  background-size: 300px 300px, 200px 200px, 250px 250px, auto;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Bubble container - enhanced performance */
+.bubble-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.15);
+  box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+  animation: bubbleFloat linear infinite;
+  bottom: -100px;
+}
+
+.bubble::before {
+  content: '';
+  position: absolute;
+  width: 40%;
+  height: 40%;
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 50%;
+  top: 20%;
+  left: 20%;
+  filter: blur(2px);
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  background: rgba(212, 175, 55, 0.4);
+  border-radius: 50%;
+  top: 15%;
+  left: 40%;
+  filter: blur(1px);
+}
+
+@keyframes bubbleFloat {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-120vh) translateX(calc(var(--x-move) * 100px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.light-reflection {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg,
+      rgba(212, 175, 55, 0.08) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(0, 0, 0, 0.15) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--container-padding);
+  position: relative;
+  z-index: 1;
+}
+
+/* Card styles with forest background and gold accents */
+.header,
+.sensor-card,
+.control-panel {
+  background: rgba(36, 61, 50, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(212, 175, 55, 0.15);
+  transition: all 0.3s ease;
+}
+
+.sensor-card:hover,
+.control-item:hover {
+  background: rgba(45, 74, 62, 0.95);
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(212, 175, 55, 0.1);
+  transform: translateY(-5px);
+}
+
+/* Header Styles - mobile first */
+.header {
+  background: rgba(36, 61, 50, 0.9);
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--primary);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-left i {
+  font-size: 1.75rem;
+  color: var(--primary);
+  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));
+}
+
+.header-left h1 {
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#current-time {
+  font-weight: 600;
+  color: var(--background-light);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-family: monospace;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+}
+
+.btn-icon {
+  background: linear-gradient(135deg, var(--primary) 0%, #B8960F 100%);
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--forest-depth);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon i {
+  font-size: 1rem;
+}
+
+.btn-icon:hover {
+  background: var(--primary);
+  transform: scale(1.1) rotate(15deg);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+/* Sensor Grid - Mobile first (2 columns on mobile, stays 2 columns on larger) */
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+/* For extra small devices, ensure cards don't become too cramped */
+@media (max-width: 480px) {
+  .sensor-grid {
+    gap: 0.75rem;
+  }
+  
+  .sensor-card {
+    padding: 1rem;
+  }
+}
+
+.sensor-card {
+  padding: 1.25rem;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.card-header i {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+.card-header h3 {
+  color: var(--background-light);
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  word-break: break-word;
+}
+
+/* Age input styling - mobile optimized */
+.age-input-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.age-input-container input {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.7rem;
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  font-size: 0.9rem;
+  background: rgba(26, 48, 38, 0.9);
+  color: var(--background-light);
+}
+
+.age-input-container input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.age-input-container button {
+  background: linear-gradient(135deg, var(--primary) 0%, #B8960F 100%);
+  border: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 12px;
+  color: var(--forest-depth);
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.age-input-container button:hover {
+  background: var(--primary);
+  transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.age-feedback {
+  font-size: 0.7rem;
+  margin-top: 0.75rem;
+  color: var(--primary);
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Control Panel - mobile first */
+.control-panel {
+  background: rgba(36, 61, 50, 0.9);
+  padding: 1.25rem;
+  border-radius: 20px;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+  margin-top: 1.5rem;
+  border-top: 2px solid var(--primary);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.panel-header h2 {
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.panel-header i {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.mode-toggle {
+  display: flex;
+  background: rgba(26, 48, 38, 0.8);
+  border-radius: 40px;
+  padding: 0.25rem;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.btn-mode {
+  padding: 0.35rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  color: var(--background-light);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-mode.active {
+  background: linear-gradient(135deg, var(--primary) 0%, #B8960F 100%);
+  color: var(--forest-depth);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.875rem;
+}
+
+@media (max-width: 480px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+.control-item {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(26, 48, 38, 0.6);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.control-item i {
+  font-size: 1.75rem;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.control-item h4 {
+  color: var(--background-light);
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.control-status {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #9e9e9e;
+  font-size: 0.75rem;
+}
+
+.control-status.active {
+  color: var(--primary);
+}
+
+/* Toggle Switch - mobile friendly size */
+.toggle-container {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #3a5a4e;
+  transition: .3s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--background-light);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, var(--primary) 0%, #B8960F 100%);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+input:disabled + .toggle-slider {
+  background-color: #2a4a3e;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input:disabled:checked + .toggle-slider {
+  background: linear-gradient(135deg, #8B7A2E 0%, #7A6A25 100%);
+}
+
+/* Temperature card special accent */
+.sensor-card.temperature .card-value {
+  color: var(--primary);
+}
+
+/* Responsive adjustments for tablets and up */
+@media (min-width: 768px) {
+  :root {
+    --container-padding: 1.5rem;
+    --card-padding: 1.5rem;
+    --gap-md: 1.25rem;
+    --gap-lg: 2rem;
+  }
+  
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-left i {
+    font-size: 2rem;
+  }
+  
+  .card-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .card-value {
+    font-size: 2.2rem;
+  }
+  
+  .panel-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .btn-mode {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+  
+  .control-item i {
+    font-size: 2rem;
+  }
+  
+  .control-item h4 {
+    font-size: 0.95rem;
+  }
+}
+
+/* For very large screens, keep it centered and restrained */
+@media (min-width: 1200px) {
+  .container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .sensor-grid {
+    gap: 1.25rem;
+  }
+}
+
+/* Fix for notched phones and safe area */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  
+  .container {
+    padding-left: max(var(--container-padding), env(safe-area-inset-left));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right));
+  }
+}
+
+/* Scrollbar styling - works on all devices */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--forest-depth);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C5A028;
+}
+
+/* Touch-friendly tap targets */
+button, 
+.btn-mode, 
+.toggle-switch,
+.age-input-container button,
+.btn-icon {
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.2);
+}
+
+/* Improve readability on smaller devices */
+@media (max-width: 480px) {
+  .card-value {
+    font-size: 1.6rem;
+  }
+  
+  .age-input-container input {
+    font-size: 0.85rem;
+    padding: 0.6rem;
+  }
+  
+  .age-input-container button {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .age-feedback {
+    font-size: 0.65rem;
+  }
+  
+  .control-status {
+    font-size: 0.7rem;
+  }
+}
+
+/* Ensure all cards have consistent spacing */
+.sensor-card .card-header,
+.sensor-card .card-value,
+.sensor-card .age-input-container,
+.sensor-card .age-feedback {
+  width: 100%;
+}
+
+/* Fix for input number spinners on mobile - better UX */
+.age-input-container input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.age-input-container input[type="number"]::-webkit-inner-spin-button,
+.age-input-container input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.5;
+  height: 24px;
+}
+
+/* Ensure proper backdrop filter performance */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .bubble {
+    animation: none;
+    display: none;
+  }
+}
