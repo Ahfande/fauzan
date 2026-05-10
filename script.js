@@ -323,8 +323,8 @@ function autoControl() {
     
     // STEP 4: Tentukan output berdasarkan tabel logika
     let newControl1 = false; // Lampu
-    let newControl2 = false; // Kipas
-    let newControl3 = false; // Pompa
+    let newControl2 = false; // Pompa
+    let newControl3 = false; // Kipas
     
     let alasan = '';
     
@@ -333,16 +333,16 @@ function autoControl() {
         alasan = 'Suhu terlalu dingin, menghangatkan kandang';
         
         if (kategoriLembab === 'KERING') {
-            newControl2 = false;
-            newControl3 = true;
+            newControl2 = true;
+            newControl3 = false;
             alasan += ' + kelembaban kering, menyalakan pompa untuk pelembaban';
         } else if (kategoriLembab === 'IDEAL') {
             newControl2 = false;
             newControl3 = false;
             alasan += ' + kelembaban ideal, hanya pemanas yang aktif';
         } else { // BASAH
-            newControl2 = true;
-            newControl3 = false;
+            newControl2 = false;
+            newControl3 = true;
             alasan += ' + kelembaban basah, menyalakan kipas untuk sirkulasi udara';
         }
     } 
@@ -351,29 +351,29 @@ function autoControl() {
         alasan = 'Suhu normal';
         
         if (kategoriLembab === 'KERING') {
-            newControl2 = false;
-            newControl3 = true;
+            newControl2 = true;
+            newControl3 = false;
             alasan += ' tetapi kelembaban kering → menyalakan pompa untuk pelembaban';
         } else if (kategoriLembab === 'IDEAL') {
             newControl2 = false;
             newControl3 = false;
             alasan += ' dan kelembaban ideal → semua aktuator mati (KONDISI IDEAL)';
         } else { // BASAH
-            newControl2 = true;
-            newControl3 = false;
+            newControl2 = false;
+            newControl3 = true;
             alasan += ' tetapi kelembaban basah → menyalakan kipas untuk sirkulasi';
         }
     } 
     else { // PANAS
         newControl1 = false;
-        newControl2 = true;
+        newControl3 = true;
         alasan = 'Suhu terlalu panas, menyalakan kipas untuk pendinginan';
         
         if (kategoriLembab === 'KERING') {
-            newControl3 = true;
+            newControl2 = true;
             alasan += ' + kelembaban kering, menyalakan pompa untuk misting (pendinginan evaporatif)';
         } else {
-            newControl3 = false;
+            newControl3 = true;
             alasan += ' + kelembaban cukup, hanya kipas yang aktif';
         }
     }
