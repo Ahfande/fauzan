@@ -322,6 +322,7 @@ function autoControl() {
     }
     
     // STEP 4: Tentukan output berdasarkan tabel logika
+    // control1 = LAMPU, control2 = POMPA, control3 = KIPAS
     let newControl1 = false; // Lampu
     let newControl2 = false; // Pompa
     let newControl3 = false; // Kipas
@@ -329,57 +330,57 @@ function autoControl() {
     let alasan = '';
     
     if (kategoriSuhu === 'DINGIN') {
-        newControl1 = true;  // Lampu ON untuk semua kondisi dingin
-        alasan = 'Suhu terlalu dingin, menghangatkan kandang';
+        newControl1 = true;  // Lampu ON (menghangatkan kandang)
+        alasan = 'Suhu terlalu dingin, menyalakan LAMPU untuk menghangatkan kandang';
         
         if (kategoriLembab === 'KERING') {
-            newControl2 = true;
-            newControl3 = false;
-            alasan += ' + kelembaban kering, menyalakan pompa untuk pelembaban';
+            newControl2 = true;   // Pompa ON (pelembaban)
+            newControl3 = false;  // Kipas OFF
+            alasan += ' + kelembaban kering, menyalakan POMPA untuk pelembaban';
         } else if (kategoriLembab === 'IDEAL') {
-            newControl2 = false;
-            newControl3 = false;
-            alasan += ' + kelembaban ideal, hanya pemanas yang aktif';
+            newControl2 = false;  // Pompa OFF
+            newControl3 = false;  // Kipas OFF
+            alasan += ' + kelembaban ideal, hanya LAMPU yang aktif';
         } else { // BASAH
-            newControl2 = false;
-            newControl3 = true;
-            alasan += ' + kelembaban basah, menyalakan kipas untuk sirkulasi udara';
+            newControl2 = false;  // Pompa OFF
+            newControl3 = true;   // Kipas ON (sirkulasi udara)
+            alasan += ' + kelembaban basah, menyalakan KIPAS untuk sirkulasi udara';
         }
     } 
     else if (kategoriSuhu === 'NORMAL') {
-        newControl1 = false;
+        newControl1 = false;  // Lampu OFF
         alasan = 'Suhu normal';
         
         if (kategoriLembab === 'KERING') {
-            newControl2 = true;
-            newControl3 = false;
-            alasan += ' tetapi kelembaban kering → menyalakan pompa untuk pelembaban';
+            newControl2 = true;   // Pompa ON
+            newControl3 = false;  // Kipas OFF
+            alasan += ' tetapi kelembaban kering → menyalakan POMPA untuk pelembaban';
         } else if (kategoriLembab === 'IDEAL') {
-            newControl2 = false;
-            newControl3 = false;
+            newControl2 = false;  // Pompa OFF
+            newControl3 = false;  // Kipas OFF
             alasan += ' dan kelembaban ideal → semua aktuator mati (KONDISI IDEAL)';
         } else { // BASAH
-            newControl2 = false;
-            newControl3 = true;
-            alasan += ' tetapi kelembaban basah → menyalakan kipas untuk sirkulasi';
+            newControl2 = false;  // Pompa OFF
+            newControl3 = true;   // Kipas ON
+            alasan += ' tetapi kelembaban basah → menyalakan KIPAS untuk sirkulasi';
         }
     } 
     else { // PANAS
-        newControl1 = false;
-        newControl3 = true;
-        alasan = 'Suhu terlalu panas, menyalakan kipas untuk pendinginan';
+        newControl1 = false;  // Lampu OFF
+        newControl3 = true;   // Kipas ON (pendinginan)
+        alasan = 'Suhu terlalu panas, menyalakan KIPAS untuk pendinginan';
         
         if (kategoriLembab === 'KERING') {
-            newControl2 = true;
-            alasan += ' + kelembaban kering, menyalakan pompa untuk misting (pendinginan evaporatif)';
+            newControl2 = true;   // Pompa ON (misting / pendinginan evaporatif)
+            alasan += ' + kelembaban kering, menyalakan POMPA untuk misting (pendinginan evaporatif)';
         } else {
-            newControl3 = true;
-            alasan += ' + kelembaban cukup, hanya kipas yang aktif';
+            newControl2 = false;  // Pompa OFF
+            alasan += ' + kelembaban cukup, hanya KIPAS yang aktif';
         }
     }
     
     console.log(`🧠 KEPUTUSAN: ${alasan}`);
-    console.log(`📤 OUTPUT: Lampu=${newControl1 ? '🟢 ON' : '⚫ OFF'}, Kipas=${newControl2 ? '🟢 ON' : '⚫ OFF'}, Pompa=${newControl3 ? '🟢 ON' : '⚫ OFF'}`);
+    console.log(`📤 OUTPUT: Lampu=${newControl1 ? '🟢 ON' : '⚫ OFF'}, Pompa=${newControl2 ? '🟢 ON' : '⚫ OFF'}, Kipas=${newControl3 ? '🟢 ON' : '⚫ OFF'}`);
     
     // STEP 5: Update status jika ada perubahan
     if (control1Status !== newControl1 || control2Status !== newControl2 || control3Status !== newControl3) {
