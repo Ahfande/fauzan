@@ -43,11 +43,6 @@ function initializeWithoutSupabase() {
 }
 
 function startFarmApp() {
-    console.log('Starting Smart Farm Application...');
-    
-    // ========================
-    // ELEMEN DOM
-    // ========================
     const suhuElement = document.getElementById('suhu-value');
     const kelembabanElement = document.getElementById('kelembaban-value');
     const umurDisplay = document.getElementById('umur-display');
@@ -55,6 +50,17 @@ function startFarmApp() {
     const setUmurBtn = document.getElementById('set-umur-btn');
     const umurFeedback = document.getElementById('umur-feedback');
     const timeElement = document.getElementById('current-time');
+    
+    // ========================
+    // VARIABEL GRAFIK
+    // ========================
+    let suhuChart, kelembabanChart;
+    let suhuDataPoints = [];     
+    let kelembabanDataPoints = []; 
+    let waktuDataPoints = [];    
+    let lastSensorId = null;
+    let sensorTimestamp = null; 
+    const MAX_DATA_POINTS = 20;   
     
     // ========================
     // VARIABEL GLOBAL
@@ -69,7 +75,182 @@ function startFarmApp() {
     let useSimulatedData = true;
     
     // ========================
-    // FUNGSI UPDATE UMUR HARIAN
+    // FUNGSI GRAFIK
+    // ========================
+    function initCharts() {
+        const ctxSuhu = document.getElementById('suhuChart').getContext('2d');
+        const ctxKelembaban = document.getElementById('kelembabanChart').getContext('2d');
+        
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        if (suhuDataPoints.length === 0) {
+            suhuDataPoints = [28];
+            kelembabanDataPoints = [65];
+            waktuDataPoints = [timeLabel];
+        }
+        
+        suhuChart = new Chart(ctxSuhu, {
+            type: 'line',
+            data: {
+                labels: waktuDataPoints,
+                datasets: [{
+                    label: 'Suhu (℃)',
+                    data: suhuDataPoints,
+                    borderColor: '#D4AF37',
+                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#D4AF37',
+                    pointBorderColor: '#fff',
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { labels: { color: '#f6f8f7', font: { size: 11 } } },
+                    tooltip: { backgroundColor: 'rgba(26, 48, 38, 0.95)', titleColor: '#D4AF37', bodyColor: '#f6f8f7', borderColor: '#D4AF37', borderWidth: 1 }
+                },
+                scales: {
+                    y: { beginAtZero: false, min: 15, max: 45, grid: { color: 'rgba(212, 175, 55, 0.1)' }, title: { display: true, text: 'Temperature (℃)', color: '#D4AF37', font: { size: 10 } }, ticks: { color: '#f6f8f7' } },
+                    x: { grid: { color: 'rgba(212, 175, 55, 0.05)' }, ticks: { color: '#f6f8f7', maxRotation: 45, minRotation: 45, font: { size: 9 } } }
+                }
+            }
+        });
+        
+        kelembabanChart = new Chart(ctxKelembaban, {
+            type: 'line',
+            data: {
+                labels: waktuDataPoints,
+                datasets: [{
+                    label: 'Kelembaban (%)',
+                    data: kelembabanDataPoints,
+                    borderColor: '#4A90D9',
+                    backgroundColor: 'rgba(74, 144, 217, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#4A90D9',
+                    pointBorderColor: '#fff',
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { labels: { color: '#f6f8f7', font: { size: 11 } } },
+                    tooltip: { backgroundColor: 'rgba(26, 48, 38, 0.95)', titleColor: '#4A90D9', bodyColor: '#f6f8f7', borderColor: '#4A90D9', borderWidth: 1 }
+                },
+                scales: {
+                    y: { beginAtZero: false, min: 0, max: 100, grid: { color: 'rgba(74, 144, 217, 0.1)' }, title: { display: true, text: 'Kelembaban (%)', color: '#4A90D9', font: { size: 10 } }, ticks: { color: '#f6f8f7' } },
+                    x: { grid: { color: 'rgba(212, 175, 55, 0.05)' }, ticks: { color: '#f6f8f7', maxRotation: 45, minRotation: 45, font: { size: 9 } } }
+                }
+            }
+        });
+    }
+    
+    function addChartDataPoint(nilaiSuhu, nilaiKelembaban, timestamp) {
+        if (!suhuChart || !kelembabanChart) return;
+        
+        let timeLabel;
+        if (timestamp) {
+            const date = new Date(timestamp);
+            timeLabel = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } else {
+            const now = new Date();
+            timeLabel = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        suhuDataPoints.push(nilaiSuhu);
+        kelembabanDataPoints.push(nilaiKelembaban);
+        waktuDataPoints.push(timeLabel);
+        
+        while (suhuDataPoints.length > MAX_DATA_POINTS) {
+            suhuDataPoints.shift();
+            kelembabanDataPoints.shift();
+            waktuDataPoints.shift();
+        }
+
+        suhuChart.data.labels = [...waktuDataPoints];
+        suhuChart.data.datasets[0].data = [...suhuDataPoints];
+        suhuChart.update('none');
+        
+        kelembabanChart.data.labels = [...waktuDataPoints];
+        kelembabanChart.data.datasets[0].data = [...kelembabanDataPoints];
+        kelembabanChart.update('none');
+        
+        saveChartDataToLocal();
+    }
+    
+    function saveChartDataToLocal() {
+        const chartData = { suhu: suhuDataPoints, kelembaban: kelembabanDataPoints, waktu: waktuDataPoints, lastSensorId: lastSensorId };
+        localStorage.setItem('chartData', JSON.stringify(chartData));
+    }
+    
+    function loadChartDataFromLocal() {
+        const saved = localStorage.getItem('chartData');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.suhu && data.suhu.length > 0) {
+                    suhuDataPoints = data.suhu;
+                    kelembabanDataPoints = data.kelembaban;
+                    waktuDataPoints = data.waktu;
+                    lastSensorId = data.lastSensorId || null;
+                    
+                    if (suhuChart && kelembabanChart) {
+                        suhuChart.data.labels = [...waktuDataPoints];
+                        suhuChart.data.datasets[0].data = [...suhuDataPoints];
+                        suhuChart.update();
+                        kelembabanChart.data.labels = [...waktuDataPoints];
+                        kelembabanChart.data.datasets[0].data = [...kelembabanDataPoints];
+                        kelembabanChart.update();
+                    }
+                }
+            } catch(e) { console.log('Error loading chart data:', e); }
+        }
+    }
+    
+    function resetCharts() {
+        suhuDataPoints = [];
+        kelembabanDataPoints = [];
+        waktuDataPoints = [];
+        lastSensorId = null;
+        
+        if (!useSimulatedData && suhu !== 0 && kelembaban !== 0) {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            suhuDataPoints.push(suhu);
+            kelembabanDataPoints.push(kelembaban);
+            waktuDataPoints.push(timeLabel);
+        }
+        
+        if (suhuChart && kelembabanChart) {
+            suhuChart.data.labels = [...waktuDataPoints];
+            suhuChart.data.datasets[0].data = [...suhuDataPoints];
+            suhuChart.update();
+            kelembabanChart.data.labels = [...waktuDataPoints];
+            kelembabanChart.data.datasets[0].data = [...kelembabanDataPoints];
+            kelembabanChart.update();
+        }
+        
+        saveChartDataToLocal();
+        if (umurFeedback) {
+            const originalText = umurFeedback.textContent;
+            umurFeedback.textContent = '📊 Grafik telah direset!';
+            umurFeedback.style.color = '#D4AF37';
+            setTimeout(() => { umurFeedback.textContent = originalText; }, 2000);
+        }
+    }
+    
+    // ========================
+    // UPDATE UMUR HARIAN
     // ========================
     function updateUmurHarian() {
         const today = new Date().toDateString();
@@ -85,114 +266,71 @@ function startFarmApp() {
             umurDisplay.textContent = umurAyam + ' Hari';
             umurInput.value = umurAyam;
             saveUmurAyam(umurAyam);
-            
             umurFeedback.textContent = '📅 Umur ayam bertambah! Sekarang ' + umurAyam + ' hari';
             umurFeedback.style.color = '#D4AF37';
             setTimeout(() => resetFeedback(), 3000);
             localStorage.setItem('lastUmurUpdate', today);
-            console.log('Umur ayam bertambah menjadi:', umurAyam, 'hari');
-            
-            if (umurAyam >= 60 && umurAyam < 61) {
-                umurFeedback.textContent = '🎉 SELAMAT! Ayam sudah siap panen! 🎉';
-                setTimeout(() => resetFeedback(), 5000);
-            }
         }
     }
     
-    // ========================
-    // FUNGSI SUPABASE
-    // ========================
-    
-    // TAMBAHKAN FUNGSI INI - SAVE MODE KE SUPABASE
     async function saveMode(mode) {
-        if (!window.supabaseClient) {
-            console.log('No Supabase, mode saved to localStorage only');
-            return;
-        }
+        if (!window.supabaseClient) return;
+        try {
+            await window.supabaseClient.from('system_config').insert([{ mode: mode, updated_at: new Date().toISOString() }]);
+        } catch (error) { console.error('Error saving mode:', error); }
+    }
+    
+    async function fetchSensorData() {
+        if (!window.supabaseClient) { useSimulatedData = true; return false; }
         
         try {
-            const { error } = await window.supabaseClient
-                .from('system_config')
-                .insert([{ 
-                    mode: mode, 
-                    updated_at: new Date().toISOString() 
-                }]);
+            const { data, error } = await window.supabaseClient.from('sensors').select('suhu, kelembaban, id, created_at').order('id', { ascending: false }).limit(1);
             
-            if (error) {
-                console.error('Error saving mode to Supabase:', error);
-            } else {
-                console.log('✅ Mode saved to Supabase:', mode);
-            }
-        } catch (error) {
-            console.error('Error in saveMode:', error);
-        }
+            if (error) { useSimulatedData = true; return false; }
+            
+            if (data && data.length > 0) {
+                const newSensorId = data[0].id;
+                const newSuhu = data[0].suhu;
+                const newKelembaban = data[0].kelembaban;
+                const newTimestamp = data[0].created_at;
+                const isNewData = (lastSensorId !== newSensorId);
+                
+                if (isNewData) {
+                    suhu = newSuhu;
+                    kelembaban = newKelembaban;
+                    lastSensorId = newSensorId;
+                    sensorTimestamp = newTimestamp;
+                    useSimulatedData = false;
+                    updateSensorDisplay();
+                    addChartDataPoint(suhu, kelembaban, sensorTimestamp);
+                    if (currentMode === 'AUTO') autoControl();
+                    return true;
+                } else {
+                    if (useSimulatedData) {
+                        suhu = newSuhu;
+                        kelembaban = newKelembaban;
+                        lastSensorId = newSensorId;
+                        useSimulatedData = false;
+                        updateSensorDisplay();
+                        addChartDataPoint(suhu, kelembaban, newTimestamp);
+                        if (currentMode === 'AUTO') autoControl();
+                    } else { updateSensorDisplay(); }
+                    return false;
+                }
+            } else { useSimulatedData = true; return false; }
+        } catch (error) { useSimulatedData = true; return false; }
     }
-    
-async function fetchSensorData() {
-    if (!window.supabaseClient) {
-        useSimulatedData = true;
-        return false;
-    }
-    
-    try {
-        // Gunakan order by id DESC (lebih akurat)
-        const { data, error } = await window.supabaseClient
-            .from('sensors')
-            .select('suhu, kelembaban, id, created_at')
-            .order('id', { ascending: false })  // Ganti dari created_at ke id
-            .limit(1);
-        
-        if (error) {
-            console.error('Error fetching sensor:', error);
-            useSimulatedData = true;
-            return false;
-        }
-        
-        if (data && data.length > 0) {
-            suhu = data[0].suhu;
-            kelembaban = data[0].kelembaban;
-            updateSensorDisplay();
-            useSimulatedData = false;
-            console.log('✅ Sensor data loaded:', suhu, kelembaban, 'ID:', data[0].id);
-            return true;
-        } else {
-            console.log('No sensor data found');
-            useSimulatedData = true;
-            return false;
-        }
-    } catch (error) {
-        console.error('Error in fetchSensorData:', error);
-        useSimulatedData = true;
-        return false;
-    }
-}
     
     async function fetchUmurAyam() {
         if (!window.supabaseClient) {
             const saved = localStorage.getItem('umurAyam');
-            if (saved) {
-                umurAyam = parseInt(saved);
-                umurDisplay.textContent = umurAyam + ' Hari';
-                umurInput.value = umurAyam;
-            }
+            if (saved) { umurAyam = parseInt(saved); umurDisplay.textContent = umurAyam + ' Hari'; umurInput.value = umurAyam; }
             return;
         }
-        
         try {
-            const { data, error } = await window.supabaseClient
-                .from('farm_config')
-                .select('umur_ayam')
-                .order('updated_at', { ascending: false })
-                .limit(1);
-            
-            if (!error && data && data.length > 0) {
-                umurAyam = data[0].umur_ayam;
-                umurDisplay.textContent = umurAyam + ' Hari';
-                umurInput.value = umurAyam;
-            }
-        } catch (error) {
-            console.error('Error fetching umur:', error);
-        }
+            const { data, error } = await window.supabaseClient.from('farm_config').select('umur_ayam').order('updated_at', { ascending: false }).limit(1);
+            if (!error && data && data.length > 0) { umurAyam = data[0].umur_ayam; umurDisplay.textContent = umurAyam + ' Hari'; umurInput.value = umurAyam; }
+        } catch (error) { console.error('Error fetching umur:', error); }
     }
     
     async function fetchControlStatus() {
@@ -206,39 +344,16 @@ async function fetchSensorData() {
             updateControlUI();
             return;
         }
-        
         try {
-            const { data, error } = await window.supabaseClient
-                .from('control_status')
-                .select('control1, control2, control3')
-                .order('updated_at', { ascending: false })
-                .limit(1);
-            
-            if (!error && data && data.length > 0) {
-                control1Status = data[0].control1;
-                control2Status = data[0].control2;
-                control3Status = data[0].control3;
-                updateControlUI();
-            }
-        } catch (error) {
-            console.error('Error fetching control:', error);
-        }
+            const { data, error } = await window.supabaseClient.from('control_status').select('control1, control2, control3').order('updated_at', { ascending: false }).limit(1);
+            if (!error && data && data.length > 0) { control1Status = data[0].control1; control2Status = data[0].control2; control3Status = data[0].control3; updateControlUI(); }
+        } catch (error) { console.error('Error fetching control:', error); }
     }
     
     async function saveUmurAyam(umur) {
-        if (!window.supabaseClient) {
-            localStorage.setItem('umurAyam', umur);
-            return;
-        }
-        
-        try {
-            await window.supabaseClient
-                .from('farm_config')
-                .insert([{ umur_ayam: umur, updated_at: new Date().toISOString() }]);
-        } catch (error) {
-            console.error('Error saving umur:', error);
-            localStorage.setItem('umurAyam', umur);
-        }
+        if (!window.supabaseClient) { localStorage.setItem('umurAyam', umur); return; }
+        try { await window.supabaseClient.from('farm_config').insert([{ umur_ayam: umur, updated_at: new Date().toISOString() }]); } 
+        catch (error) { localStorage.setItem('umurAyam', umur); }
     }
     
     async function saveControlStatus() {
@@ -248,419 +363,492 @@ async function fetchSensorData() {
             localStorage.setItem('control3Status', control3Status);
             return;
         }
-        
         try {
-            await window.supabaseClient
-                .from('control_status')
-                .insert([{ 
-                    control1: control1Status, 
-                    control2: control2Status, 
-                    control3: control3Status,
-                    updated_at: new Date().toISOString()
-                }]);
-            console.log('Control saved:', {control1Status, control2Status, control3Status});
-        } catch (error) {
-            console.error('Error saving control:', error);
-            localStorage.setItem('control1Status', control1Status);
-            localStorage.setItem('control2Status', control2Status);
-            localStorage.setItem('control3Status', control3Status);
-        }
+            await window.supabaseClient.from('control_status').insert([{ control1: control1Status, control2: control2Status, control3: control3Status, updated_at: new Date().toISOString() }]);
+        } catch (error) { console.error('Error saving control:', error); }
     }
     
-    // ========================
-    // FUNGSI AUTO CONTROL (LOGIKA ONLY DI WEB)
-    // ========================
-function autoControl() {
-    if (currentMode !== 'AUTO') return;
-    if (useSimulatedData) return;
-    
-    console.log('═══════════════════════════════════════════════════');
-    console.log('🤖 AUTO CONTROL TRIGGERED');
-    console.log(`📊 INPUT: Umur=${umurAyam} hari, Suhu=${suhu}°C, Kelembaban=${kelembaban}%`);
-    console.log('═══════════════════════════════════════════════════');
-    
-    // STEP 1: Tentukan batas suhu berdasarkan umur
-    let batasDingin, batasPanas;
-    if (umurAyam <= 7) {
-        batasDingin = 28;
-        batasPanas = 33;
-        console.log(`📌 KELOMPOK UMUR: 1-7 hari (batas dingin=${batasDingin}°C, batas panas=${batasPanas}°C)`);
-    } else if (umurAyam <= 14) {
-        batasDingin = 26;
-        batasPanas = 30;
-        console.log(`📌 KELOMPOK UMUR: 8-14 hari (batas dingin=${batasDingin}°C, batas panas=${batasPanas}°C)`);
-    } else {
-        batasDingin = 22;
-        batasPanas = 27;
-        console.log(`📌 KELOMPOK UMUR: 15-35 hari (batas dingin=${batasDingin}°C, batas panas=${batasPanas}°C)`);
-    }
-    
-    // STEP 2: Tentukan kategori suhu
-    let kategoriSuhu;
-    if (suhu < batasDingin) {
-        kategoriSuhu = 'DINGIN';
-        console.log(`🌡️ KATEGORI SUHU: DINGIN (${suhu}°C < ${batasDingin}°C)`);
-    } else if (suhu > batasPanas) {
-        kategoriSuhu = 'PANAS';
-        console.log(`🌡️ KATEGORI SUHU: PANAS (${suhu}°C > ${batasPanas}°C)`);
-    } else {
-        kategoriSuhu = 'NORMAL';
-        console.log(`🌡️ KATEGORI SUHU: NORMAL (${batasDingin}°C ≤ ${suhu}°C ≤ ${batasPanas}°C)`);
-    }
-    
-    // STEP 3: Tentukan kategori kelembaban
-    let kategoriLembab;
-    if (kelembaban < 50) {
-        kategoriLembab = 'KERING';
-        console.log(`💧 KATEGORI KELEMBABAN: KERING (${kelembaban}% < 50%)`);
-    } else if (kelembaban > 70) {
-        kategoriLembab = 'BASAH';
-        console.log(`💧 KATEGORI KELEMBABAN: BASAH (${kelembaban}% > 70%)`);
-    } else {
-        kategoriLembab = 'IDEAL';
-        console.log(`💧 KATEGORI KELEMBABAN: IDEAL (50% ≤ ${kelembaban}% ≤ 70%)`);
-    }
-    
-    // STEP 4: Tentukan output berdasarkan tabel logika
-    // control1 = LAMPU, control2 = POMPA, control3 = KIPAS
-    let newControl1 = false; // Lampu
-    let newControl2 = false; // Pompa
-    let newControl3 = false; // Kipas
-    
-    let alasan = '';
-    
-    if (kategoriSuhu === 'DINGIN') {
-        newControl1 = true;  // Lampu ON (menghangatkan kandang)
-        alasan = 'Suhu terlalu dingin, menyalakan LAMPU untuk menghangatkan kandang';
+    function autoControl() {
+        if (currentMode !== 'AUTO' || useSimulatedData) return;
         
-        if (kategoriLembab === 'KERING') {
-            newControl2 = true;   // Pompa ON (pelembaban)
-            newControl3 = false;  // Kipas OFF
-            alasan += ' + kelembaban kering, menyalakan POMPA untuk pelembaban';
-        } else if (kategoriLembab === 'IDEAL') {
-            newControl2 = false;  // Pompa OFF
-            newControl3 = false;  // Kipas OFF
-            alasan += ' + kelembaban ideal, hanya LAMPU yang aktif';
-        } else { // BASAH
-            newControl2 = false;  // Pompa OFF
-            newControl3 = true;   // Kipas ON (sirkulasi udara)
-            alasan += ' + kelembaban basah, menyalakan KIPAS untuk sirkulasi udara';
-        }
-    } 
-    else if (kategoriSuhu === 'NORMAL') {
-        newControl1 = false;  // Lampu OFF
-        alasan = 'Suhu normal';
+        let batasDingin, batasPanas;
+        if (umurAyam <= 7) { batasDingin = 28; batasPanas = 33; }
+        else if (umurAyam <= 14) { batasDingin = 26; batasPanas = 30; }
+        else { batasDingin = 22; batasPanas = 27; }
         
-        if (kategoriLembab === 'KERING') {
-            newControl2 = true;   // Pompa ON
-            newControl3 = false;  // Kipas OFF
-            alasan += ' tetapi kelembaban kering → menyalakan POMPA untuk pelembaban';
-        } else if (kategoriLembab === 'IDEAL') {
-            newControl2 = false;  // Pompa OFF
-            newControl3 = false;  // Kipas OFF
-            alasan += ' dan kelembaban ideal → semua aktuator mati (KONDISI IDEAL)';
-        } else { // BASAH
-            newControl2 = false;  // Pompa OFF
-            newControl3 = true;   // Kipas ON
-            alasan += ' tetapi kelembaban basah → menyalakan KIPAS untuk sirkulasi';
-        }
-    } 
-    else { // PANAS
-        newControl1 = false;  // Lampu OFF
-        newControl3 = true;   // Kipas ON (pendinginan)
-        alasan = 'Suhu terlalu panas, menyalakan KIPAS untuk pendinginan';
+        let kategoriSuhu = (suhu < batasDingin) ? 'DINGIN' : (suhu > batasPanas) ? 'PANAS' : 'NORMAL';
+        let kategoriLembab = (kelembaban < 50) ? 'KERING' : (kelembaban > 70) ? 'BASAH' : 'IDEAL';
+
+        let newControl1 = false, newControl2 = false, newControl3 = false;
         
-        if (kategoriLembab === 'KERING') {
-            newControl2 = true;   // Pompa ON (misting / pendinginan evaporatif)
-            alasan += ' + kelembaban kering, menyalakan POMPA untuk misting (pendinginan evaporatif)';
+        if (kategoriSuhu === 'DINGIN') {
+            newControl1 = true;
+            if (kategoriLembab === 'KERING') newControl2 = true;
+            else if (kategoriLembab === 'BASAH') newControl3 = true;
+        } else if (kategoriSuhu === 'NORMAL') {
+            if (kategoriLembab === 'KERING') newControl2 = true;
+            else if (kategoriLembab === 'BASAH') newControl3 = true;
         } else {
-            newControl2 = false;  // Pompa OFF
-            alasan += ' + kelembaban cukup, hanya KIPAS yang aktif';
+            newControl3 = true;
+            if (kategoriLembab === 'KERING') newControl2 = true;
+        }
+        
+        if (control1Status !== newControl1 || control2Status !== newControl2 || control3Status !== newControl3) {
+            control1Status = newControl1; control2Status = newControl2; control3Status = newControl3;
+            updateControlUI(); saveControlStatus();
         }
     }
-    
-    console.log(`🧠 KEPUTUSAN: ${alasan}`);
-    console.log(`📤 OUTPUT: Lampu=${newControl1 ? '🟢 ON' : '⚫ OFF'}, Pompa=${newControl2 ? '🟢 ON' : '⚫ OFF'}, Kipas=${newControl3 ? '🟢 ON' : '⚫ OFF'}`);
-    
-    // STEP 5: Update status jika ada perubahan
-    if (control1Status !== newControl1 || control2Status !== newControl2 || control3Status !== newControl3) {
-        control1Status = newControl1;
-        control2Status = newControl2;
-        control3Status = newControl3;
-        updateControlUI();
-        saveControlStatus();
-        console.log('✅ STATUS UPDATED: Perubahan disimpan');
-    } else {
-        console.log('⏸️ TIDAK ADA PERUBAHAN: Status masih sama seperti sebelumnya');
-    }
-    
-    console.log('═══════════════════════════════════════════════════\n');
-}
     
     function updateControlUI() {
         const toggles = document.querySelectorAll('.toggle-switch input');
         const statusDivs = document.querySelectorAll('.control-status');
         
         toggles.forEach((toggle, index) => {
-            if (toggle) {
-                if (index === 0) toggle.checked = control1Status;
-                if (index === 1) toggle.checked = control2Status;
-                if (index === 2) toggle.checked = control3Status;
-            }
+            if (toggle) { if (index === 0) toggle.checked = control1Status; if (index === 1) toggle.checked = control2Status; if (index === 2) toggle.checked = control3Status; }
         });
         
         statusDivs.forEach((status, index) => {
             if (status) {
-                let isActive = false;
-                if (index === 0) isActive = control1Status;
-                if (index === 1) isActive = control2Status;
-                if (index === 2) isActive = control3Status;
-                
+                let isActive = (index === 0) ? control1Status : (index === 1) ? control2Status : control3Status;
                 status.textContent = isActive ? 'AKTIF' : 'NONAKTIF';
-                if (isActive) status.classList.add('active');
-                else status.classList.remove('active');
+                if (isActive) status.classList.add('active'); else status.classList.remove('active');
             }
         });
     }
     
     function updateSensorDisplay() {
-        if (suhuElement) {
-            if (useSimulatedData || (suhu === 0 && kelembaban === 0)) {
-                suhuElement.textContent = '--°C';
-            } else {
-                suhuElement.textContent = Math.round(suhu) + '°C';
-            }
-        }
-        
-        if (kelembabanElement) {
-            if (useSimulatedData || (suhu === 0 && kelembaban === 0)) {
-                kelembabanElement.textContent = '--%';
-            } else {
-                kelembabanElement.textContent = Math.round(kelembaban) + '%';
-            }
-        }
+        if (suhuElement) suhuElement.textContent = (useSimulatedData || (suhu === 0 && kelembaban === 0)) ? '--°C' : Math.round(suhu) + '°C';
+        if (kelembabanElement) kelembabanElement.textContent = (useSimulatedData || (suhu === 0 && kelembaban === 0)) ? '--%' : Math.round(kelembaban) + '%';
     }
     
-    async function refreshSensorData() {
-        await fetchSensorData();
-        if (currentMode === 'AUTO' && !useSimulatedData) {
-            autoControl();
-        }
-    }
-    
-    // ========================
-    // FUNGSI UMUR AYAM
-    // ========================
+    async function checkForNewSensorData() { await fetchSensorData(); }
+
     function setUmurAyam() {
         let nilaiUmur = parseInt(umurInput.value);
-        
-        if (isNaN(nilaiUmur)) {
-            umurFeedback.textContent = '❌ Masukkan angka yang valid!';
-            setTimeout(() => resetFeedback(), 2000);
-            return;
-        }
-        
-        if (nilaiUmur < 0 || nilaiUmur > 100) {
-            umurFeedback.textContent = nilaiUmur < 0 ? '⚠️ Umur tidak boleh negatif!' : '⚠️ Maksimal umur 100 hari!';
-            setTimeout(() => resetFeedback(), 2000);
-            return;
-        }
+        if (isNaN(nilaiUmur)) { umurFeedback.textContent = '❌ Masukkan angka yang valid!'; setTimeout(() => resetFeedback(), 2000); return; }
+        if (nilaiUmur < 0 || nilaiUmur > 100) { umurFeedback.textContent = nilaiUmur < 0 ? '⚠️ Umur tidak boleh negatif!' : '⚠️ Maksimal umur 100 hari!'; setTimeout(() => resetFeedback(), 2000); return; }
         
         umurAyam = nilaiUmur;
         umurDisplay.textContent = umurAyam + ' Hari';
         umurInput.value = umurAyam;
         saveUmurAyam(umurAyam);
         localStorage.setItem('lastUmurUpdate', new Date().toDateString());
-        
         umurFeedback.textContent = '✅ Umur ayam berhasil diupdate!';
-        
-        if (umurAyam === 0) {
-            umurFeedback.textContent = '🐣 Ayam baru lahir! Selamat memelihara!';
-        } else if (umurAyam >= 60) {
-            umurFeedback.textContent = '🎉 Ayam siap panen! Umur sudah ' + umurAyam + ' hari';
-        } else if (umurAyam >= 30) {
-            umurFeedback.textContent = '📈 Ayam dalam masa pertumbuhan optimal';
-        }
-        
+        if (umurAyam === 0) umurFeedback.textContent = '🐣 Ayam baru lahir! Selamat memelihara!';
+        else if (umurAyam >= 60) umurFeedback.textContent = '🎉 Ayam siap panen! Umur sudah ' + umurAyam + ' hari';
         setTimeout(() => resetFeedback(), 2500);
     }
     
-    function resetFeedback() {
-        umurFeedback.textContent = 'Masukkan umur ayam dalam hari';
-        umurFeedback.style.color = '#D4AF37';
-    }
+    function resetFeedback() { umurFeedback.textContent = 'Masukkan umur ayam dalam hari'; umurFeedback.style.color = '#D4AF37'; }
     
-    // ========================
-    // FUNGSI MODE (AUTO/MANUAL) - DIPERBAIKI DENGAN SAVE MODE
-    // ========================
     function switchMode(mode) {
         currentMode = mode;
-        console.log('🔄 Switching to mode:', mode);
-        
         const toggles = document.querySelectorAll('.toggle-switch input');
+        if (mode === 'AUTO') { toggles.forEach(toggle => { if (toggle) toggle.disabled = true; }); if (!useSimulatedData) autoControl(); } 
+        else { toggles.forEach(toggle => { if (toggle) toggle.disabled = false; }); }
         
-        if (mode === 'AUTO') {
-            // Nonaktifkan semua toggle
-            toggles.forEach(toggle => {
-                if (toggle) toggle.disabled = true;
-            });
-            // Jalankan auto control
-            if (!useSimulatedData) {
-                autoControl();
-            }
-        } else {
-            // Aktifkan semua toggle untuk manual
-            toggles.forEach(toggle => {
-                if (toggle) toggle.disabled = false;
-            });
-        }
-        
-        // Update UI mode buttons
         const modeBtns = document.querySelectorAll('.btn-mode');
-        modeBtns.forEach(btn => {
-            if (btn && btn.textContent.trim() === mode) {
-                btn.classList.add('active');
-            } else if (btn) {
-                btn.classList.remove('active');
-            }
-        });
-        
-        // Simpan mode ke localStorage
-        localStorage.setItem('currentMode', mode);
-        
-        // *** INI YANG PENTING: SIMPAN MODE KE SUPABASE ***
-        saveMode(mode);
+        modeBtns.forEach(btn => { if (btn && btn.textContent.trim() === mode) btn.classList.add('active'); else if (btn) btn.classList.remove('active'); });
+        localStorage.setItem('currentMode', mode); saveMode(mode);
     }
     
-    // ========================
-    // SETUP MANUAL TOGGLES
-    // ========================
     function setupManualToggles() {
         const toggles = document.querySelectorAll('.toggle-switch input');
-        
         toggles.forEach((toggle, index) => {
-            // Hapus event listener lama dengan clone
             const newToggle = toggle.cloneNode(true);
             toggle.parentNode.replaceChild(newToggle, toggle);
-            
             newToggle.addEventListener('change', function(e) {
-                console.log(`Toggle ${index + 1} clicked, current mode:`, currentMode);
-                
                 if (currentMode === 'MANUAL') {
-                    // Update status
                     if (index === 0) control1Status = this.checked;
                     if (index === 1) control2Status = this.checked;
                     if (index === 2) control3Status = this.checked;
-                    
-                    // Update UI
                     const statusDivs = document.querySelectorAll('.control-status');
                     if (statusDivs[index]) {
                         statusDivs[index].textContent = this.checked ? 'AKTIF' : 'NONAKTIF';
-                        if (this.checked) statusDivs[index].classList.add('active');
-                        else statusDivs[index].classList.remove('active');
+                        if (this.checked) statusDivs[index].classList.add('active'); else statusDivs[index].classList.remove('active');
                     }
-                    
-                    // Simpan ke database
                     saveControlStatus();
-                    console.log(`✅ Control ${index + 1} set to:`, this.checked ? 'AKTIF' : 'NONAKTIF');
                 } else {
-                    // Di mode AUTO, revert ke nilai sebelumnya
                     if (index === 0) this.checked = control1Status;
                     if (index === 1) this.checked = control2Status;
                     if (index === 2) this.checked = control3Status;
-                    
-                    // Tampilkan peringatan
                     const controlItem = this.closest('.control-item');
                     const warning = document.createElement('div');
                     warning.textContent = '⚠️ Ganti ke MODE MANUAL dulu!';
-                    warning.style.color = '#D4AF37';
-                    warning.style.fontSize = '11px';
-                    warning.style.marginTop = '5px';
-                    warning.style.backgroundColor = 'rgba(0,0,0,0.5)';
-                    warning.style.padding = '2px 5px';
-                    warning.style.borderRadius = '5px';
+                    warning.style.cssText = 'color:#D4AF37;font-size:11px;margin-top:5px;background:rgba(0,0,0,0.5);padding:2px 5px;border-radius:5px;';
                     controlItem.appendChild(warning);
                     setTimeout(() => warning.remove(), 1500);
                 }
             });
-            
-            // Update reference
             toggles[index] = newToggle;
         });
     }
     
-    function updateTime() {
-        const now = new Date();
-        if (timeElement) {
-            timeElement.textContent = now.toLocaleTimeString('id-ID');
-        }
-    }
+    function updateTime() { if (timeElement) timeElement.textContent = new Date().toLocaleTimeString('id-ID'); }
     
     function createBubbles() {
         const bubbleContainer = document.querySelector('.bubble-container');
         if (!bubbleContainer) return;
-        
         for (let i = 0; i < 30; i++) {
             const bubble = document.createElement('div');
             bubble.classList.add('bubble');
             const size = Math.random() * 60 + 10;
-            bubble.style.width = size + 'px';
-            bubble.style.height = size + 'px';
-            bubble.style.left = Math.random() * 100 + '%';
-            bubble.style.animationDuration = Math.random() * 15 + 8 + 's';
-            bubble.style.animationDelay = Math.random() * 10 + 's';
+            bubble.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;animation-duration:${Math.random()*15+8}s;animation-delay:${Math.random()*10}s;`;
             bubble.style.setProperty('--x-move', (Math.random() - 0.5) * 2);
             bubbleContainer.appendChild(bubble);
         }
     }
     
     // ========================
+    // FUNGSI DOWNLOAD HISTORY (FIXED PDF)
+    // ========================
+    
+    async function fetchSensorDataByDateRange(startDate, endDate) {
+        if (!window.supabaseClient) return [];
+        try {
+            let query = window.supabaseClient.from('sensors').select('suhu, kelembaban, created_at').order('created_at', { ascending: true });
+            if (startDate) { const startDateTime = new Date(startDate); startDateTime.setHours(0,0,0,0); query = query.gte('created_at', startDateTime.toISOString()); }
+            if (endDate) { const endDateTime = new Date(endDate); endDateTime.setHours(23,59,59,999); query = query.lte('created_at', endDateTime.toISOString()); }
+            const { data, error } = await query;
+            if (error) return [];
+            return data || [];
+        } catch (error) { return []; }
+    }
+    
+    async function fetchControlHistoryByDateRange(startDate, endDate) {
+        if (!window.supabaseClient) return [];
+        try {
+            let query = window.supabaseClient.from('control_status').select('control1, control2, control3, updated_at').order('updated_at', { ascending: true });
+            if (startDate) { const startDateTime = new Date(startDate); startDateTime.setHours(0,0,0,0); query = query.gte('updated_at', startDateTime.toISOString()); }
+            if (endDate) { const endDateTime = new Date(endDate); endDateTime.setHours(23,59,59,999); query = query.lte('updated_at', endDateTime.toISOString()); }
+            const { data, error } = await query;
+            if (error) return [];
+            return data || [];
+        } catch (error) { return []; }
+    }
+    
+    async function fetchModeHistoryByDateRange(startDate, endDate) {
+        if (!window.supabaseClient) return [];
+        try {
+            let query = window.supabaseClient.from('system_config').select('mode, updated_at').order('updated_at', { ascending: true });
+            if (startDate) { const startDateTime = new Date(startDate); startDateTime.setHours(0,0,0,0); query = query.gte('updated_at', startDateTime.toISOString()); }
+            if (endDate) { const endDateTime = new Date(endDate); endDateTime.setHours(23,59,59,999); query = query.lte('updated_at', endDateTime.toISOString()); }
+            const { data, error } = await query;
+            if (error) return [];
+            return data || [];
+        } catch (error) { return []; }
+    }
+    
+    function aggregateDataByInterval(data, intervalMinutes) {
+        if (!data || data.length === 0) return [];
+        if (intervalMinutes === 1) return data.map(d => ({ ...d, type: 'original' }));
+        
+        const aggregated = [];
+        const intervalMs = intervalMinutes * 60 * 1000;
+        let currentIntervalStart = new Date(data[0].created_at);
+        currentIntervalStart.setMilliseconds(0); currentIntervalStart.setSeconds(0);
+        let sumSuhu = 0, sumKelembaban = 0, count = 0;
+        
+        for (const item of data) {
+            const itemDate = new Date(item.created_at);
+            const intervalStart = new Date(currentIntervalStart);
+            if (itemDate - intervalStart < intervalMs) {
+                sumSuhu += item.suhu; sumKelembaban += item.kelembaban; count++;
+            } else {
+                if (count > 0) aggregated.push({ start_time: new Date(currentIntervalStart), end_time: new Date(currentIntervalStart.getTime() + intervalMs), avg_suhu: sumSuhu/count, avg_kelembaban: sumKelembaban/count, count: count });
+                currentIntervalStart = new Date(itemDate); currentIntervalStart.setMilliseconds(0); currentIntervalStart.setSeconds(0);
+                sumSuhu = item.suhu; sumKelembaban = item.kelembaban; count = 1;
+            }
+        }
+        if (count > 0) aggregated.push({ start_time: new Date(currentIntervalStart), end_time: new Date(currentIntervalStart.getTime() + intervalMs), avg_suhu: sumSuhu/count, avg_kelembaban: sumKelembaban/count, count: count });
+        return aggregated;
+    }
+    
+    function getControlStatusAtTime(controlHistory, targetTime) {
+        let latestStatus = { control1: false, control2: false, control3: false };
+        for (const record of controlHistory) { if (new Date(record.updated_at) <= targetTime) latestStatus = { control1: record.control1, control2: record.control2, control3: record.control3 }; else break; }
+        return latestStatus;
+    }
+    
+    function getModeAtTime(modeHistory, targetTime) {
+        let latestMode = 'AUTO';
+        for (const record of modeHistory) { if (new Date(record.updated_at) <= targetTime) latestMode = record.mode; else break; }
+        return latestMode;
+    }
+    
+    function generateCSVWithFilters(sensorData, controlHistory, modeHistory, intervalMinutes, startDate, endDate) {
+        const aggregatedData = aggregateDataByInterval(sensorData, intervalMinutes);
+        const now = new Date();
+        const dateRangeText = `${startDate || 'Awal'} s/d ${endDate || 'Sekarang'}`;
+        let csvRows = [];
+        
+        csvRows.push(['LAPORAN DATA SMART CONTROL']);
+        csvRows.push(['Tanggal Export:', now.toLocaleString('id-ID')]);
+        csvRows.push(['Periode Data:', dateRangeText]);
+        csvRows.push(['Interval Rata-rata:', intervalMinutes === 1 ? 'Original (setiap data)' : `${intervalMinutes} menit`]);
+        csvRows.push(['Total Data Original:', sensorData.length]);
+        csvRows.push(['Total Data Setelah Agregasi:', aggregatedData.length]);
+        csvRows.push(['']);
+        csvRows.push(['RINGKASAN KONDISI TERAKHIR']);
+        csvRows.push(['Parameter', 'Nilai']);
+        csvRows.push(['Mode Kontrol', getModeAtTime(modeHistory, new Date())]);
+        csvRows.push(['Status Lampu', getControlStatusAtTime(controlHistory, new Date()).control1 ? 'AKTIF' : 'NONAKTIF']);
+        csvRows.push(['Status Pompa', getControlStatusAtTime(controlHistory, new Date()).control2 ? 'AKTIF' : 'NONAKTIF']);
+        csvRows.push(['Status Kipas', getControlStatusAtTime(controlHistory, new Date()).control3 ? 'AKTIF' : 'NONAKTIF']);
+        csvRows.push(['']);
+        
+        if (intervalMinutes === 1) {
+            csvRows.push(['DATA SENSOR ORIGINAL']);
+            csvRows.push(['Waktu', 'Suhu (°C)', 'Kelembaban (%)', 'Mode', 'Lampu', 'Pompa', 'Kipas']);
+            for (const item of sensorData) {
+                const waktu = new Date(item.created_at).toLocaleString('id-ID');
+                const mode = getModeAtTime(modeHistory, new Date(item.created_at));
+                const control = getControlStatusAtTime(controlHistory, new Date(item.created_at));
+                csvRows.push([waktu, item.suhu, item.kelembaban, mode, control.control1 ? 'AKTIF' : 'NONAKTIF', control.control2 ? 'AKTIF' : 'NONAKTIF', control.control3 ? 'AKTIF' : 'NONAKTIF']);
+            }
+        } else {
+            csvRows.push([`DATA SENSOR RATA-RATA PER ${intervalMinutes} MENIT`]);
+            csvRows.push(['Periode Mulai', 'Periode Selesai', 'Rata Suhu', 'Rata Kelembaban', 'Jumlah Data', 'Mode', 'Lampu', 'Pompa', 'Kipas']);
+            for (const interval of aggregatedData) {
+                const midTime = new Date((interval.start_time.getTime() + interval.end_time.getTime()) / 2);
+                const mode = getModeAtTime(modeHistory, midTime);
+                const control = getControlStatusAtTime(controlHistory, midTime);
+                csvRows.push([interval.start_time.toLocaleString('id-ID'), interval.end_time.toLocaleString('id-ID'), interval.avg_suhu.toFixed(1), interval.avg_kelembaban.toFixed(1), interval.count, mode, control.control1 ? 'AKTIF' : 'NONAKTIF', control.control2 ? 'AKTIF' : 'NONAKTIF', control.control3 ? 'AKTIF' : 'NONAKTIF']);
+            }
+        }
+        return csvRows.map(row => row.join(',')).join('\n');
+    }
+    
+    // ========================
+    // PDF GENERATION - FIXED menggunakan window.open + print
+    // ========================
+    async function downloadHistoryPDF() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const interval = parseInt(document.getElementById('intervalSelect').value);
+        
+        showDownloadFeedback('📡 Mengambil data untuk PDF...');
+        
+        const [sensorData, controlHistory, modeHistory] = await Promise.all([
+            fetchSensorDataByDateRange(startDate, endDate),
+            fetchControlHistoryByDateRange(startDate, endDate),
+            fetchModeHistoryByDateRange(startDate, endDate)
+        ]);
+        
+        if (!sensorData || sensorData.length === 0) {
+            showDownloadFeedback('⚠️ Tidak ada data pada periode yang dipilih!');
+            return;
+        }
+        
+        const aggregatedData = aggregateDataByInterval(sensorData, interval);
+        const now = new Date();
+        const dateRangeText = `${startDate || 'Awal'} s/d ${endDate || 'Sekarang'}`;
+        const lastControl = getControlStatusAtTime(controlHistory, new Date());
+        const lastMode = getModeAtTime(modeHistory, new Date());
+        
+        // Build HTML for PDF
+        let tableRows = '';
+        const maxRows = interval === 1 ? 500 : 200;
+        const displayData = interval === 1 ? sensorData.slice(0, maxRows) : aggregatedData.slice(0, maxRows);
+        
+        if (interval === 1) {
+            for (const item of displayData) {
+                const waktu = new Date(item.created_at).toLocaleString('id-ID');
+                const mode = getModeAtTime(modeHistory, new Date(item.created_at));
+                const control = getControlStatusAtTime(controlHistory, new Date(item.created_at));
+                tableRows += `<tr><td style="border:1px solid #ddd;padding:6px;">${waktu}</td><td style="border:1px solid #ddd;padding:6px;">${item.suhu}°C</td><td style="border:1px solid #ddd;padding:6px;">${item.kelembaban}%</td><td style="border:1px solid #ddd;padding:6px;">${mode}</td><td style="border:1px solid #ddd;padding:6px;${control.control1 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control1 ? 'AKTIF' : 'NONAKTIF'}</td><td style="border:1px solid #ddd;padding:6px;${control.control2 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control2 ? 'AKTIF' : 'NONAKTIF'}</td><td style="border:1px solid #ddd;padding:6px;${control.control3 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control3 ? 'AKTIF' : 'NONAKTIF'}</td></tr>`;
+            }
+        } else {
+            for (const interval of displayData) {
+                const midTime = new Date((interval.start_time.getTime() + interval.end_time.getTime()) / 2);
+                const mode = getModeAtTime(modeHistory, midTime);
+                const control = getControlStatusAtTime(controlHistory, midTime);
+                tableRows += `<tr><td style="border:1px solid #ddd;padding:6px;">${interval.start_time.toLocaleString('id-ID')}</td><td style="border:1px solid #ddd;padding:6px;">${interval.end_time.toLocaleString('id-ID')}</td><td style="border:1px solid #ddd;padding:6px;">${interval.avg_suhu.toFixed(1)}°C</td><td style="border:1px solid #ddd;padding:6px;">${interval.avg_kelembaban.toFixed(1)}%</td><td style="border:1px solid #ddd;padding:6px;">${interval.count}</td><td style="border:1px solid #ddd;padding:6px;">${mode}</td><td style="border:1px solid #ddd;padding:6px;${control.control1 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control1 ? 'AKTIF' : 'NONAKTIF'}</td><td style="border:1px solid #ddd;padding:6px;${control.control2 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control2 ? 'AKTIF' : 'NONAKTIF'}</td><td style="border:1px solid #ddd;padding:6px;${control.control3 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}">${control.control3 ? 'AKTIF' : 'NONAKTIF'}</td></tr>`;
+            }
+        }
+        
+        const pdfHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: white; }
+        .container { max-width: 100%; margin: 0 auto; }
+        h1 { color: #D4AF37; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; }
+        .info-box { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #D4AF37; }
+        .info-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .info-card { background: #f5f5f5; padding: 12px; border-radius: 8px; flex: 1; min-width: 150px; border-left: 4px solid #D4AF37; }
+        .info-card strong { display: block; color: #2D4A3E; margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+        th { background: #D4AF37; color: #1A3026; padding: 8px; border: 1px solid #ddd; }
+        td { padding: 6px; border: 1px solid #ddd; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 10px; color: #666; }
+        @media print { body { padding: 10px; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SMART CONTROL SYSTEM</h1>
+        <div class="subtitle">Laporan Monitoring Kandang</div>
+        
+        <div class="info-grid">
+            <div class="info-card"><strong>Tanggal Export</strong>${now.toLocaleString('id-ID')}</div>
+            <div class="info-card"><strong>Periode Data</strong>${dateRangeText}</div>
+            <div class="info-card"><strong>Interval</strong>${interval === 1 ? 'Original (setiap data)' : `${interval} menit`}</div>
+            <div class="info-card"><strong>Total Data</strong>${sensorData.length} data original<br>${aggregatedData.length} data tampil</div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card"><strong>Mode Kontrol</strong>${lastMode}</div>
+            <div class="info-card"><strong>Lampu</strong><span style="${lastControl.control1 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}"> ${lastControl.control1 ? 'AKTIF' : 'NONAKTIF'}</span></div>
+            <div class="info-card"><strong>Pompa</strong><span style="${lastControl.control2 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}"> ${lastControl.control2 ? 'AKTIF' : 'NONAKTIF'}</span></div>
+            <div class="info-card"><strong>Kipas</strong><span style="${lastControl.control3 ? 'color:#28a745;font-weight:bold;' : 'color:#dc3545;'}"> ${lastControl.control3 ? 'AKTIF' : 'NONAKTIF'}</span></div>
+        </div>
+        
+        <h3 style="margin: 20px 0 10px 0; background: #2D4A3E; color: #D4AF37; padding: 8px; border-radius: 5px;">DATA SENSOR ${interval === 1 ? '(ORIGINAL)' : `RATA-RATA PER ${interval} MENIT`}</h3>
+        <table>
+            <thead>
+                <tr>
+                    ${interval === 1 ? 
+                        '<th>Waktu</th><th>Suhu</th><th>Kelembaban</th><th>Mode</th><th>Lampu</th><th>Pompa</th><th>Kipas</th>' :
+                        '<th>Periode Mulai</th><th>Periode Selesai</th><th>Rata Suhu</th><th>Rata Kelembaban</th><th>Jml Data</th><th>Mode</th><th>Lampu</th><th>Pompa</th><th>Kipas</th>'
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows || '<tr><td colspan="9" style="text-align:center;">Tidak ada data</td></tr>'}
+            </tbody>
+        </table>
+        ${(interval === 1 && sensorData.length > maxRows) ? `<p style="font-size:10px; color:#666; margin-top:10px;">* Menampilkan ${maxRows} dari ${sensorData.length} data terbaru</p>` : ''}
+        ${(!interval === 1 && aggregatedData.length > maxRows) ? `<p style="font-size:10px; color:#666; margin-top:10px;">* Menampilkan ${maxRows} dari ${aggregatedData.length} interval</p>` : ''}
+        
+        <div class="footer">
+            <p>Generated: ${now.toLocaleString('id-ID')}</p>
+        </div>
+    </div>
+    <script>
+        window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };
+    </script>
+</body>
+</html>
+        `;
+        
+        // Open new window and print
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(pdfHtml);
+            printWindow.document.close();
+            showDownloadFeedback('✅ PDF berhasil dibuka! Silakan klik Save/Print.');
+        } else {
+            showDownloadFeedback('❌ Popup diblokir. Izinkan popup untuk download PDF.');
+        }
+    }
+    
+    function showDownloadModal() {
+        const modal = document.getElementById('downloadModal');
+        if (modal) {
+            const today = new Date();
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(today.getDate() - 7);
+            
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            if (startDateInput && !startDateInput.value) startDateInput.value = oneWeekAgo.toISOString().slice(0,10);
+            if (endDateInput && !endDateInput.value) endDateInput.value = today.toISOString().slice(0,10);
+            
+            modal.style.display = 'block';
+            const closeBtn = modal.querySelector('.modal-close');
+            if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+            window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
+        }
+    }
+    
+    function showDownloadFeedback(message) {
+        const feedback = document.createElement('div');
+        feedback.innerHTML = `<div style="position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#2D4A3E,#1A3026);color:#D4AF37;padding:12px 20px;border-radius:10px;border:1px solid #D4AF37;box-shadow:0 5px 20px rgba(0,0,0,0.3);z-index:1001;font-weight:600;animation:slideInRight 0.3s ease;"><i class="fas fa-info-circle"></i> ${message}</div>`;
+        if (!document.querySelector('#downloadFeedbackStyle')) {
+            const style = document.createElement('style');
+            style.id = 'downloadFeedbackStyle';
+            style.textContent = '@keyframes slideInRight{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}';
+            document.head.appendChild(style);
+        }
+        document.body.appendChild(feedback);
+        setTimeout(() => { if(feedback && feedback.remove) feedback.remove(); }, 3000);
+    }
+    
+    async function downloadHistoryCSV() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const interval = parseInt(document.getElementById('intervalSelect').value);
+        
+        showDownloadFeedback('📡 Mengambil data dari database...');
+        const [sensorData, controlHistory, modeHistory] = await Promise.all([
+            fetchSensorDataByDateRange(startDate, endDate),
+            fetchControlHistoryByDateRange(startDate, endDate),
+            fetchModeHistoryByDateRange(startDate, endDate)
+        ]);
+        
+        if (!sensorData || sensorData.length === 0) { showDownloadFeedback('⚠️ Tidak ada data pada periode yang dipilih!'); return; }
+        
+        const csvData = generateCSVWithFilters(sensorData, controlHistory, modeHistory, interval, startDate, endDate);
+        const blob = new Blob(["\uFEFF" + csvData], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const filename = `smart_control_${startDate || 'all'}_to_${endDate || 'now'}_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`;
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showDownloadFeedback(`✅ CSV berhasil didownload! (${sensorData.length} data)`);
+    }
+    
+    // ========================
     // INISIALISASI
     // ========================
     async function init() {
-        // Ambil data dari Supabase
-        await fetchSensorData();
+        initCharts();
+        loadChartDataFromLocal();
+        
+        await fetchSensorData(); 
         await fetchUmurAyam();
         await fetchControlStatus();
         
-        // Setup manual toggles
         setupManualToggles();
-        
-        // Setup mode buttons
         const modeBtns = document.querySelectorAll('.btn-mode');
-        modeBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const mode = this.textContent.trim();
-                switchMode(mode);
-            });
-        });
-        
-        // Load saved mode dari localStorage
+        modeBtns.forEach(btn => { btn.addEventListener('click', function() { switchMode(this.textContent.trim()); }); });
         const savedMode = localStorage.getItem('currentMode');
-        if (savedMode && (savedMode === 'AUTO' || savedMode === 'MANUAL')) {
-            switchMode(savedMode);
-        } else {
-            switchMode('AUTO');
-        }
+        switchMode((savedMode === 'AUTO' || savedMode === 'MANUAL') ? savedMode : 'AUTO');
         
-        // Setup umur ayam
+        const resetSuhuBtn = document.getElementById('resetSuhuChart');
+        const resetKelembabanBtn = document.getElementById('resetKelembabanChart');
+        if (resetSuhuBtn) resetSuhuBtn.addEventListener('click', resetCharts);
+        if (resetKelembabanBtn) resetKelembabanBtn.addEventListener('click', resetCharts);
+        
         if (setUmurBtn) setUmurBtn.addEventListener('click', setUmurAyam);
-        if (umurInput) {
-            umurInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') setUmurAyam();
-            });
-        }
+        if (umurInput) umurInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') setUmurAyam(); });
         
-        // Interval untuk update
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) downloadBtn.addEventListener('click', showDownloadModal);
+        
+        const downloadCSVBtn = document.getElementById('downloadCSV');
+        if (downloadCSVBtn) downloadCSVBtn.addEventListener('click', () => { document.getElementById('downloadModal').style.display = 'none'; downloadHistoryCSV(); });
+        
+        const downloadPDFBtn = document.getElementById('downloadPDF');
+        if (downloadPDFBtn) downloadPDFBtn.addEventListener('click', () => { document.getElementById('downloadModal').style.display = 'none'; downloadHistoryPDF(); });
+        
         setInterval(updateUmurHarian, 60000);
         updateUmurHarian();
-        setInterval(refreshSensorData, 3000);
+        setInterval(checkForNewSensorData, 5000);
         setInterval(updateTime, 1000);
         updateTime();
         createBubbles();
         
         console.log('✅ Smart Farm Ready! Mode:', currentMode);
-        console.log('💡 Tips: Klik MANUAL dulu baru bisa kontrol manual');
+        console.log('📥 Fitur Download: Pilih tanggal dan interval, lalu download CSV/PDF');
     }
     
     init();

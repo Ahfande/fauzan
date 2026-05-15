@@ -9,7 +9,6 @@
   --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%);
   --forest-gradient: linear-gradient(180deg, #2D4A3E 0%, #1A3026 100%);
   
-  /* Spacing & breakpoints */
   --container-padding: 1rem;
   --card-padding: 1.25rem;
   --gap-md: 1rem;
@@ -31,7 +30,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Forest leaf pattern overlay - optimized */
 body::before {
   content: '';
   position: fixed;
@@ -49,7 +47,6 @@ body::before {
   z-index: 0;
 }
 
-/* Bubble container - enhanced performance */
 .bubble-container {
   position: fixed;
   top: 0;
@@ -134,7 +131,6 @@ body::before {
   z-index: 1;
 }
 
-/* Card styles with forest background and gold accents */
 .header,
 .sensor-card,
 .control-panel {
@@ -224,11 +220,8 @@ body::before {
 
 .btn-icon:hover {
   background: var(--primary);
-  transform: scale(1.1) rotate(15deg);
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
 }
-
-/* Sensor Grid - Mobile first (2 columns on mobile, stays 2 columns on larger) */
 .sensor-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -236,7 +229,6 @@ body::before {
   margin-bottom: 1.5rem;
 }
 
-/* For extra small devices, ensure cards don't become too cramped */
 @media (max-width: 480px) {
   .sensor-grid {
     gap: 0.75rem;
@@ -450,7 +442,6 @@ body::before {
   color: var(--primary);
 }
 
-/* Toggle Switch - mobile friendly size */
 .toggle-container {
   margin-top: 0.5rem;
   display: flex;
@@ -512,12 +503,10 @@ input:disabled:checked + .toggle-slider {
   background: linear-gradient(135deg, #8B7A2E 0%, #7A6A25 100%);
 }
 
-/* Temperature card special accent */
 .sensor-card.temperature .card-value {
   color: var(--primary);
 }
 
-/* Responsive adjustments for tablets and up */
 @media (min-width: 768px) {
   :root {
     --container-padding: 1.5rem;
@@ -560,7 +549,6 @@ input:disabled:checked + .toggle-slider {
   }
 }
 
-/* For very large screens, keep it centered and restrained */
 @media (min-width: 1200px) {
   .container {
     padding: 1rem 0.5rem;
@@ -571,7 +559,6 @@ input:disabled:checked + .toggle-slider {
   }
 }
 
-/* Fix for notched phones and safe area */
 @supports (padding: max(0px)) {
   body {
     padding-top: max(0px, env(safe-area-inset-top));
@@ -671,5 +658,317 @@ button,
   .bubble {
     animation: none;
     display: none;
+  }
+}
+
+.charts-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .charts-section {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.chart-container {
+  background: rgba(36, 61, 50, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 20px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  background: rgba(45, 74, 62, 0.95);
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  position: relative;
+}
+
+.chart-header i {
+  font-size: 1.3rem;
+  color: var(--primary);
+}
+
+.chart-header h3 {
+  color: var(--background-light);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  flex: 1;
+}
+
+.btn-reset-chart {
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-reset-chart i {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.btn-reset-chart:hover {
+  background: rgba(212, 175, 55, 0.4);
+  transform: scale(1.05);
+  border-color: var(--primary);
+}
+
+canvas {
+  max-height: 300px;
+  width: 100%;
+}
+
+#suhuChart {
+  background: rgba(26, 48, 38, 0.4);
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+
+#kelembabanChart {
+  background: rgba(26, 48, 38, 0.4);
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    padding: 0.75rem;
+  }
+  
+  .chart-header h3 {
+    font-size: 0.85rem;
+  }
+  
+  canvas {
+    max-height: 250px;
+  }
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+
+.modal-content {
+  background: linear-gradient(135deg, #2D4A3E 0%, #1A3026 100%);
+  margin: 10% auto;
+  max-width: 500px;
+  width: 90%;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.modal-header h3 {
+  color: var(--primary);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-close {
+  color: var(--primary);
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.filter-group {
+  margin-bottom: 1.5rem;
+}
+
+.filter-group label {
+  display: block;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.filter-group label i {
+  margin-right: 0.5rem;
+}
+
+.date-range {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.date-input {
+  flex: 1;
+}
+
+.date-input span {
+  display: block;
+  color: var(--background-light);
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.date-input input {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 10px;
+  background: rgba(26, 48, 38, 0.8);
+  color: var(--background-light);
+  font-family: 'Poppins', sans-serif;
+}
+
+.date-input input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+#intervalSelect {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 10px;
+  background: rgba(26, 48, 38, 0.8);
+  color: var(--background-light);
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+#intervalSelect option {
+  background: #2D4A3E;
+}
+
+.download-options {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.download-option-btn {
+  flex: 1;
+  padding: 0.85rem 1.25rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.csv-btn {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  color: white;
+}
+
+.csv-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+.pdf-btn {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+}
+
+.pdf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+}
+
+.download-info {
+  background: rgba(26, 48, 38, 0.6);
+  padding: 0.75rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+
+.download-info small {
+  color: rgba(246, 248, 247, 0.8);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.download-info i {
+  color: var(--primary);
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    margin: 20% auto;
+    width: 95%;
+  }
+  
+  .date-range {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .download-options {
+    flex-direction: column;
+  }
+  
+  .download-option-btn {
+    width: 100%;
   }
 }
