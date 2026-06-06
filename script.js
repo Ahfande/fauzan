@@ -75,7 +75,7 @@ function startFarmApp() {
     let useSimulatedData = true;
     
     // ========================
-    // FUNGSI GRAFIK
+    // GRAFIK
     // ========================
     function initCharts() {
         const ctxSuhu = document.getElementById('suhuChart').getContext('2d');
@@ -266,7 +266,7 @@ function startFarmApp() {
             umurDisplay.textContent = umurAyam + ' Hari';
             umurInput.value = umurAyam;
             saveUmurAyam(umurAyam);
-            umurFeedback.textContent = '📅 Umur ayam bertambah! Sekarang ' + umurAyam + ' hari';
+            umurFeedback.textContent = 'Umur ayam bertambah! Sekarang ' + umurAyam + ' hari';
             umurFeedback.style.color = '#D4AF37';
             setTimeout(() => resetFeedback(), 3000);
             localStorage.setItem('lastUmurUpdate', today);
@@ -425,17 +425,17 @@ function startFarmApp() {
 
     function setUmurAyam() {
         let nilaiUmur = parseInt(umurInput.value);
-        if (isNaN(nilaiUmur)) { umurFeedback.textContent = '❌ Masukkan angka yang valid!'; setTimeout(() => resetFeedback(), 2000); return; }
-        if (nilaiUmur < 0 || nilaiUmur > 100) { umurFeedback.textContent = nilaiUmur < 0 ? '⚠️ Umur tidak boleh negatif!' : '⚠️ Maksimal umur 100 hari!'; setTimeout(() => resetFeedback(), 2000); return; }
+        if (isNaN(nilaiUmur)) { umurFeedback.textContent = 'Masukkan angka yang valid!'; setTimeout(() => resetFeedback(), 2000); return; }
+        if (nilaiUmur < 0 || nilaiUmur > 100) { umurFeedback.textContent = nilaiUmur < 0 ? 'Umur tidak boleh negatif!' : '⚠️ Maksimal umur 100 hari!'; setTimeout(() => resetFeedback(), 2000); return; }
         
         umurAyam = nilaiUmur;
         umurDisplay.textContent = umurAyam + ' Hari';
         umurInput.value = umurAyam;
         saveUmurAyam(umurAyam);
         localStorage.setItem('lastUmurUpdate', new Date().toDateString());
-        umurFeedback.textContent = '✅ Umur ayam berhasil diupdate!';
-        if (umurAyam === 0) umurFeedback.textContent = '🐣 Ayam baru lahir! Selamat memelihara!';
-        else if (umurAyam >= 60) umurFeedback.textContent = '🎉 Ayam siap panen! Umur sudah ' + umurAyam + ' hari';
+        umurFeedback.textContent = 'Umur ayam berhasil diupdate!';
+        if (umurAyam === 0) umurFeedback.textContent = 'Ayam baru lahir!';
+        else if (umurAyam >= 60) umurFeedback.textContent = 'Ayam siap panen! Umur sudah ' + umurAyam + ' hari';
         setTimeout(() => resetFeedback(), 2500);
     }
     
@@ -474,7 +474,7 @@ function startFarmApp() {
                     if (index === 2) this.checked = control3Status;
                     const controlItem = this.closest('.control-item');
                     const warning = document.createElement('div');
-                    warning.textContent = '⚠️ Ganti ke MODE MANUAL dulu!';
+                    warning.textContent = 'Ganti ke MODE MANUAL dulu!';
                     warning.style.cssText = 'color:#D4AF37;font-size:11px;margin-top:5px;background:rgba(0,0,0,0.5);padding:2px 5px;border-radius:5px;';
                     controlItem.appendChild(warning);
                     setTimeout(() => warning.remove(), 1500);
@@ -500,7 +500,7 @@ function startFarmApp() {
     }
     
     // ========================
-    // FUNGSI DOWNLOAD HISTORY (FIXED PDF)
+    // DOWNLOAD HISTORY
     // ========================
     
     async function fetchSensorDataByDateRange(startDate, endDate) {
@@ -564,11 +564,45 @@ function startFarmApp() {
         return aggregated;
     }
     
-    function getControlStatusAtTime(controlHistory, targetTime) {
-        let latestStatus = { control1: false, control2: false, control3: false };
-        for (const record of controlHistory) { if (new Date(record.updated_at) <= targetTime) latestStatus = { control1: record.control1, control2: record.control2, control3: record.control3 }; else break; }
+function getControlStatusAtTime(controlHistory, targetTime) {
+    // Default semua false
+    let latestStatus = { control1: false, control2: false, control3: false };
+    
+    if (!controlHistory || controlHistory.length === 0) {
         return latestStatus;
     }
+    
+    const targetTimestamp = new Date(targetTime).getTime();
+    let foundRecord = null;
+    
+    // Cari record dengan updated_at <= targetTime (data sudah di-sort ascending)
+    for (let i = 0; i < controlHistory.length; i++) {
+        const record = controlHistory[i];
+        const recordTime = new Date(record.updated_at).getTime();
+        
+        if (recordTime <= targetTimestamp) {
+            foundRecord = record; // Terus update sampai yang terakhir
+        }
+    }
+    
+    // Jika tidak ditemukan, gunakan record PALING AWAL (yang pertama)
+    // atau record PALING AKHIR tergantung kebutuhan
+    if (!foundRecord && controlHistory.length > 0) {
+        // Untuk data sebelum control pertama, gunakan control pertama
+        foundRecord = controlHistory[0];
+        console.log(`[INFO] No control before ${new Date(targetTimestamp).toLocaleString()}, using earliest control: ${new Date(foundRecord.updated_at).toLocaleString()}`);
+    }
+    
+    if (foundRecord) {
+        latestStatus = {
+            control1: foundRecord.control1 === true,
+            control2: foundRecord.control2 === true,
+            control3: foundRecord.control3 === true
+        };
+    }
+    
+    return latestStatus;
+}
     
     function getModeAtTime(modeHistory, targetTime) {
         let latestMode = 'AUTO';
@@ -620,7 +654,7 @@ function startFarmApp() {
     }
     
     // ========================
-    // PDF GENERATION - FIXED menggunakan window.open + print
+    // PDF
     // ========================
     async function downloadHistoryPDF() {
         const startDate = document.getElementById('startDate').value;
@@ -646,7 +680,6 @@ function startFarmApp() {
         const lastControl = getControlStatusAtTime(controlHistory, new Date());
         const lastMode = getModeAtTime(modeHistory, new Date());
         
-        // Build HTML for PDF
         let tableRows = '';
         const maxRows = interval === 1 ? 500 : 200;
         const displayData = interval === 1 ? sensorData.slice(0, maxRows) : aggregatedData.slice(0, maxRows);
@@ -735,8 +768,6 @@ function startFarmApp() {
 </body>
 </html>
         `;
-        
-        // Open new window and print
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(pdfHtml);
@@ -747,24 +778,33 @@ function startFarmApp() {
         }
     }
     
-    function showDownloadModal() {
-        const modal = document.getElementById('downloadModal');
-        if (modal) {
-            const today = new Date();
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(today.getDate() - 7);
-            
-            const startDateInput = document.getElementById('startDate');
-            const endDateInput = document.getElementById('endDate');
-            if (startDateInput && !startDateInput.value) startDateInput.value = oneWeekAgo.toISOString().slice(0,10);
-            if (endDateInput && !endDateInput.value) endDateInput.value = today.toISOString().slice(0,10);
-            
-            modal.style.display = 'block';
-            const closeBtn = modal.querySelector('.modal-close');
-            if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
-            window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
+function showDownloadModal() {
+    const modal = document.getElementById('downloadModal');
+    if (modal) {
+        // Ubah default ke tanggal Juni 2026
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        // Set ke 1 Juni 2026
+        if (startDateInput && !startDateInput.value) {
+            startDateInput.value = '2026-06-01';
         }
+        // Set ke 7 Juni 2026 (atau hari ini jika sudah lewat)
+        if (endDateInput && !endDateInput.value) {
+            const today = new Date();
+            if (today.getFullYear() === 2026 && today.getMonth() === 5) { // Juni = bulan 5
+                endDateInput.value = today.toISOString().slice(0,10);
+            } else {
+                endDateInput.value = '2026-06-07';
+            }
+        }
+        
+        modal.style.display = 'block';
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
     }
+}
     
     function showDownloadFeedback(message) {
         const feedback = document.createElement('div');
