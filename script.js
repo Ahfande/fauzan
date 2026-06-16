@@ -368,36 +368,105 @@ function startFarmApp() {
         } catch (error) { console.error('Error saving control:', error); }
     }
     
-    function autoControl() {
-        if (currentMode !== 'AUTO' || useSimulatedData) return;
-        
-        let batasDingin, batasPanas;
-        if (umurAyam <= 7) { batasDingin = 28; batasPanas = 33; }
-        else if (umurAyam <= 14) { batasDingin = 26; batasPanas = 30; }
-        else { batasDingin = 22; batasPanas = 27; }
-        
-        let kategoriSuhu = (suhu < batasDingin) ? 'DINGIN' : (suhu > batasPanas) ? 'PANAS' : 'NORMAL';
-        let kategoriLembab = (kelembaban < 50) ? 'KERING' : (kelembaban > 70) ? 'BASAH' : 'IDEAL';
-
-        let newControl1 = false, newControl2 = false, newControl3 = false;
-        
-        if (kategoriSuhu === 'DINGIN') {
+function autoControl() {
+    if (currentMode !== 'AUTO' || useSimulatedData) return;
+    
+    // Definisikan batas suhu dan kelembaban berdasarkan umur ayam
+    let batasDingin, batasPanas, batasLembabRendah, batasLembabTinggi;
+    
+    if (umurAyam <= 7) {
+        batasDingin = 28;
+        batasPanas = 33;
+        batasLembabRendah = 50;
+        batasLembabTinggi = 70;
+    } else if (umurAyam <= 14) {
+        batasDingin = 26;
+        batasPanas = 30;
+        batasLembabRendah = 50;
+        batasLembabTinggi = 70;
+    } else {
+        batasDingin = 22;
+        batasPanas = 27;
+        batasLembabRendah = 50;
+        batasLembabTinggi = 70;
+    }
+    
+    // Kategorisasi kondisi
+    let kondisiSuhu, kondisiLembab;
+    
+    if (suhu < batasDingin) kondisiSuhu = 'RENDAH';
+    else if (suhu > batasPanas) kondisiSuhu = 'TINGGI';
+    else kondisiSuhu = 'NORMAL';
+    
+    if (kelembaban < batasLembabRendah) kondisiLembab = 'RENDAH';
+    else if (kelembaban > batasLembabTinggi) kondisiLembab = 'TINGGI';
+    else kondisiLembab = 'NORMAL';
+    
+    // Logika kontrol berdasarkan tabel
+    let newControl1 = false, newControl2 = false, newControl3 = false;
+    
+    if (kondisiSuhu === 'RENDAH') {
+        if (kondisiLembab === 'RENDAH') {
+            // No 1: Suhu rendah, kelembaban rendah → Lampu ON, Pompa ON, Kipas OFF
             newControl1 = true;
-            if (kategoriLembab === 'KERING') newControl2 = true;
-            else if (kategoriLembab === 'BASAH') newControl3 = true;
-        } else if (kategoriSuhu === 'NORMAL') {
-            if (kategoriLembab === 'KERING') newControl2 = true;
-            else if (kategoriLembab === 'BASAH') newControl3 = true;
-        } else {
+            newControl2 = true;
+            newControl3 = false;
+        } else if (kondisiLembab === 'NORMAL') {
+            // No 2: Suhu rendah, kelembaban normal → Lampu ON, Pompa OFF, Kipas OFF
+            newControl1 = true;
+            newControl2 = false;
+            newControl3 = false;
+        } else { // TINGGI
+            // No 3: Suhu rendah, kelembaban tinggi → Lampu ON, Pompa OFF, Kipas ON
+            newControl1 = true;
+            newControl2 = false;
             newControl3 = true;
-            if (kategoriLembab === 'KERING') newControl2 = true;
         }
-        
-        if (control1Status !== newControl1 || control2Status !== newControl2 || control3Status !== newControl3) {
-            control1Status = newControl1; control2Status = newControl2; control3Status = newControl3;
-            updateControlUI(); saveControlStatus();
+    } else if (kondisiSuhu === 'NORMAL') {
+        if (kondisiLembab === 'RENDAH') {
+            // No 4: Suhu normal, kelembaban rendah → Lampu OFF, Pompa ON, Kipas OFF
+            newControl1 = false;
+            newControl2 = true;
+            newControl3 = false;
+        } else if (kondisiLembab === 'NORMAL') {
+            // No 5: Suhu normal, kelembaban normal → Lampu OFF, Pompa OFF, Kipas OFF
+            newControl1 = false;
+            newControl2 = false;
+            newControl3 = false;
+        } else { // TINGGI
+            // No 6: Suhu normal, kelembaban tinggi → Lampu OFF, Pompa OFF, Kipas ON
+            newControl1 = false;
+            newControl2 = false;
+            newControl3 = true;
+        }
+    } else { // SUHU TINGGI
+        if (kondisiLembab === 'RENDAH') {
+            // No 7: Suhu tinggi, kelembaban rendah → Lampu OFF, Pompa ON, Kipas ON
+            newControl1 = false;
+            newControl2 = true;
+            newControl3 = true;
+        } else if (kondisiLembab === 'NORMAL') {
+            // No 8: Suhu tinggi, kelembaban normal → Lampu OFF, Pompa OFF, Kipas ON
+            newControl1 = false;
+            newControl2 = false;
+            newControl3 = true;
+        } else { // TINGGI
+            // No 9: Suhu tinggi, kelembaban tinggi → Lampu OFF, Pompa OFF, Kipas ON
+            newControl1 = false;
+            newControl2 = false;
+            newControl3 = true;
         }
     }
+    
+    // Terapkan perubahan jika berbeda
+    if (control1Status !== newControl1 || control2Status !== newControl2 || control3Status !== newControl3) {
+        control1Status = newControl1;
+        control2Status = newControl2;
+        control3Status = newControl3;
+        updateControlUI();
+        saveControlStatus();
+    }
+}
     
     function updateControlUI() {
         const toggles = document.querySelectorAll('.toggle-switch input');
