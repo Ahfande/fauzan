@@ -374,35 +374,63 @@ function autoControl() {
     // Definisikan batas suhu dan kelembaban berdasarkan umur ayam
     let batasDingin, batasPanas, batasLembabRendah, batasLembabTinggi;
     
+    // ===== BATAS NORMAL =====
+    let suhuNormalMin, suhuNormalMax, lembabNormalMin, lembabNormalMax;
+    
     if (umurAyam <= 7) {
         batasDingin = 28;
         batasPanas = 33;
         batasLembabRendah = 50;
         batasLembabTinggi = 70;
+        // BATAS NORMAL
+        suhuNormalMin = 29;
+        suhuNormalMax = 32;
+        lembabNormalMin = 55;
+        lembabNormalMax = 65;
     } else if (umurAyam <= 14) {
         batasDingin = 26;
         batasPanas = 30;
         batasLembabRendah = 50;
         batasLembabTinggi = 70;
+        // BATAS NORMAL
+        suhuNormalMin = 27;
+        suhuNormalMax = 29;
+        lembabNormalMin = 55;
+        lembabNormalMax = 65;
     } else {
         batasDingin = 22;
         batasPanas = 27;
         batasLembabRendah = 50;
         batasLembabTinggi = 70;
+        // BATAS NORMAL
+        suhuNormalMin = 23;
+        suhuNormalMax = 26;
+        lembabNormalMin = 55;
+        lembabNormalMax = 65;
     }
     
-    // Kategorisasi kondisi
+    // ===== KATEGORISASI DENGAN BATAS NORMAL =====
     let kondisiSuhu, kondisiLembab;
     
-    if (suhu < batasDingin) kondisiSuhu = 'RENDAH';
-    else if (suhu > batasPanas) kondisiSuhu = 'TINGGI';
-    else kondisiSuhu = 'NORMAL';
+    // Suhu: RENDAH, NORMAL, TINGGI
+    if (suhu < suhuNormalMin) {
+        kondisiSuhu = 'RENDAH';
+    } else if (suhu >= suhuNormalMin && suhu <= suhuNormalMax) {
+        kondisiSuhu = 'NORMAL';
+    } else {
+        kondisiSuhu = 'TINGGI';
+    }
     
-    if (kelembaban < batasLembabRendah) kondisiLembab = 'RENDAH';
-    else if (kelembaban > batasLembabTinggi) kondisiLembab = 'TINGGI';
-    else kondisiLembab = 'NORMAL';
+    // Kelembaban: RENDAH, NORMAL, TINGGI
+    if (kelembaban < lembabNormalMin) {
+        kondisiLembab = 'RENDAH';
+    } else if (kelembaban >= lembabNormalMin && kelembaban <= lembabNormalMax) {
+        kondisiLembab = 'NORMAL';
+    } else {
+        kondisiLembab = 'TINGGI';
+    }
     
-    // Logika kontrol berdasarkan tabel
+    // ===== LOGIKA KONTROL 9 KONDISI =====
     let newControl1 = false, newControl2 = false, newControl3 = false;
     
     if (kondisiSuhu === 'RENDAH') {
@@ -429,7 +457,7 @@ function autoControl() {
             newControl2 = true;
             newControl3 = false;
         } else if (kondisiLembab === 'NORMAL') {
-            // No 5: Suhu normal, kelembaban normal → Lampu OFF, Pompa OFF, Kipas OFF
+            // No 5: Suhu normal, kelembaban normal → SEMUA OFF (IDEAL)
             newControl1 = false;
             newControl2 = false;
             newControl3 = false;
