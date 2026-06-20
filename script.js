@@ -1522,12 +1522,7 @@ function startFarmApp() {
         const oldInfo = document.getElementById("dateRangeInfo");
         if (oldInfo) oldInfo.remove();
 
-        // Buat info lengkap
-        const infoDiv = document.createElement("div");
-        infoDiv.id = "dateRangeInfo";
-        infoDiv.style.cssText =
-          "background: rgba(212, 175, 55, 0.1); border: 1px solid #D4AF37; padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: 13px; color: #D4AF37;";
-
+        
         // Cek data terakhir
         const stats = await getDataStatistics(range.start, range.end);
         let lastDataInfo = "";
@@ -1540,17 +1535,7 @@ function startFarmApp() {
           lastDataInfo = `<br><span style="font-size:12px;color:#aaa;">📊 Data terakhir: ${stats.lastDataDateStr} (${daysDiff} hari yang lalu) • Total: ${stats.totalData} data</span>`;
         }
 
-        infoDiv.innerHTML = `
-                <i class="fas fa-info-circle"></i> 
-                Data tersedia dari <strong>${range.start}</strong> sampai <strong>${range.end}</strong>
-                ${lastDataInfo}
-                <br><span style="font-size:11px;color:#888;">⚠️ Jika memilih tanggal di luar rentang, hanya data yang tersedia yang akan ditampilkan</span>
-            `;
-
         const filterGroup = modal.querySelector(".filter-group");
-        if (filterGroup) {
-          filterGroup.after(infoDiv);
-        }
       } else {
         startDateInput.value = "2026-06-01";
         endDateInput.value = "2026-06-20";
